@@ -55,10 +55,12 @@ validate $? "Extracted backend code"
 npm install &>>$Logfile
 validate $? "Installing nodejs dependencies"
 
-cp /home/ec2-user/expense-shell/backend /etc/systemd/system/backend &>>$Logfile
-valide $? "Copied backend"
+mysql_root_password=ExpenseApp@1 
 
-systemctl demon-reload &>>$Logfile
+cp /home/ec2-user/expense-shell/backend /etc/systemd/system/backend &>>$Logfile
+validate $? "Copied backend"
+
+systemctl daemon-reload &>>$Logfile
 validate $? "System reload"
 
 systemctl start backend &>>$Logfile
