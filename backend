@@ -57,8 +57,24 @@ validate $? "Installing nodejs dependencies"
 
 mysql_root_password=ExpenseApp@1 
 
-cp /home/ec2-user/expense-shell/backend /etc/systemd/system/backend &>>$Logfile
+cp /home/ec2-user/expense-shell/backend /etc/systemd/system/backend.service &>>$Logfile
 validate $? "Copied backend"
+
+cat <<EOF > /etc/systemd/system/backend.service
+[Unit]
+Description=Backend Service
+After=network.target
+
+[Service]
+User=expense
+WorkingDirectory=/app
+ExecStart=/bin/node /app/index.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+validate $? "Creating backend.service file"
 
 systemctl daemon-reload &>>$Logfile
 validate $? "System reload"
