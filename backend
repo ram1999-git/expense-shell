@@ -33,11 +33,45 @@ validate $? "Enabling nodejs:20 module"
 dnf install nodejs -y &>>$Logfile
 validate $? "Installing nodejs"
 
-id expense
+id expense &>>$Logfile
 if [ $? -ne 0 ]
 then
-useradd expense
+useradd expense &>>$Logfile
 validate $? "Creating expense user"
 else 
 echo -e "Expense user already created...$Y Skipping $N"
 fi 
+
+mkdir -p /app &>>$Logfile
+validate $? "Creating app directory"
+
+curl -o /tmp/backend.zip https://expense-builds.s3.us-east-1.amazonaws.com/expense-backend-v2.zip &>>$Logfile
+validate $? "Downloading backend code"
+
+cd /app
+unzip /tmp/backend.zip &>>$Logfile
+validate $? "Extracted backend code"
+
+npm install &>>$Logfile
+validate $? "Installing nodejs dependencies"
+
+cp /home/ec2-user/expense-shell/backend /etc/systemd/system/backend &>>$Logfile
+valide $? "Copied backend"
+
+systemctl demon-reload &>>$Logfile
+validate $? "System reload"
+
+systemctl start backend &>>$Logfile
+validate $? "Start backend"
+
+systemctl enable backend &>>$Logfile
+validate $? "Enabling backend"
+
+dnf install mysql -y &>>$Logfile
+validate $? "Mysql client installation"
+
+mysql -h 172.31.92.210 -uroot -p${mysql_root_password} < /app/schema/backend.sql &>>$Logfile
+validate $? "schema loading"
+
+systemctl restart backend &>>$Logfile
+validate $? "Restart backend"
