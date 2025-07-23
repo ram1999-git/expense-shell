@@ -38,7 +38,7 @@ systemctl start mysqld &>>$Logfile
 validate $? "Starting MySQL service"
 
 # Check if password is already set
-mysql -u root -p"${mysql_root_password}" -e 'SHOW DATABASES;' &>>$Logfile
+mysql -h 172.31.91.208 -uroot -pExpenseApp@1 < /app/schema/backend.sql &>>$Logfile
 if [ $? -ne 0 ]; then
     echo "Setting up MySQL root password..."
     mysql_secure_installation --set-root-pass "${mysql_root_password}" &>>$Logfile
