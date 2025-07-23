@@ -1,0 +1,37 @@
+#!/bin/bash
+
+userid=$(id -u)
+Timestamp=$(date +%F-%H-%M-%S)
+Script_Name=$(echo $0 | cut -d "." -f1)
+Logfile=/tmp/$Script_Name-$Timestamp.log
+R="\e[31m"
+G="\e[32m"
+Y="\e[33m"
+N="\e[0m"
+
+validate() {
+    if [ $1 -ne 0 ]; then 
+        echo -e "$2...$R Failure $N"
+    else
+        echo -e "$2...$G Success $N"
+    fi 
+}
+
+if [ $userid -ne 0 ]; then
+    echo "Please run the script with root access"
+    exit 1
+else 
+    echo "You are super user"
+fi
+
+dnf module disable nodejs -y &>>$Logfile
+validate $? "Diasbling default nodejs"
+
+dnf install enable nodejs:20 -y &>>$Logfile
+validate $? "Enabling nodejs-20"
+
+dnf install nodejs -y &>>$Logfile
+validate $? "Installing nodejs"
+
+useradd expense
+validate $? "Creating expense user"
