@@ -27,8 +27,8 @@ fi
 dnf module disable nodejs -y &>>$Logfile
 validate $? "Diasbling default nodejs"
 
-dnf install enable nodejs:20 -y &>>$Logfile
-validate $? "Enabling nodejs-20"
+dnf module enable nodejs:20 -y &>>$Logfile   # Fixed typo: 'install enable' → 'module enable'
+validate $? "Enabling nodejs:20 module"
 
 dnf install nodejs -y &>>$Logfile
 validate $? "Installing nodejs"
