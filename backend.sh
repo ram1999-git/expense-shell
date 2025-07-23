@@ -73,7 +73,7 @@ npm install &>>$Logfile
 validate $? "Installing Node.js dependencies"
 
 # Step 6: Setup systemd service
-SERVICE_FILE_SRC="/home/ec2-user/expense-shell/backend"
+SERVICE_FILE_SRC="/home/ec2-user/expense-shell/backend.sh"
 SERVICE_FILE_DST="/etc/systemd/system/backend"
 
 if [ -f "$SERVICE_FILE_SRC" ]; then
