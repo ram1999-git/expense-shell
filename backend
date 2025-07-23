@@ -24,72 +24,73 @@ else
     echo "You are super user"
 fi
 
+# Step 1: Install Node.js 20
 dnf module disable nodejs -y &>>$Logfile
-validate $? "Diasbling default nodejs"
+validate $? "Disabling default Node.js module"
 
-dnf module enable nodejs:20 -y &>>$Logfile   # Fixed typo: 'install enable' → 'module enable'
-validate $? "Enabling nodejs:20 module"
+dnf module enable nodejs:20 -y &>>$Logfile
+validate $? "Enabling Node.js 20 module"
 
 dnf install nodejs -y &>>$Logfile
-validate $? "Installing nodejs"
+validate $? "Installing Node.js"
 
+# Step 2: Create user if not exists
 id expense &>>$Logfile
-if [ $? -ne 0 ]
-then
-useradd expense &>>$Logfile
-validate $? "Creating expense user"
+if [ $? -ne 0 ]; then
+    useradd expense &>>$Logfile
+    validate $? "Creating expense user"
 else 
-echo -e "Expense user already created...$Y Skipping $N"
+    echo -e "Expense user already created...$Y Skipping $N"
 fi 
 
+# Step 3: Create /app directory
 mkdir -p /app &>>$Logfile
 validate $? "Creating app directory"
 
+# Step 4: Download and extract backend code
 curl -o /tmp/backend.zip https://expense-builds.s3.us-east-1.amazonaws.com/expense-backend-v2.zip &>>$Logfile
-validate $? "Downloading backend code"
+if [ $? -eq 0 ]; then
+  validate 0 "Downloading backend code"
 
+  rm -rf /app/* &>>$Logfile
+  validate $? "Cleaning old app contents"
+
+  unzip /tmp/backend.zip -d /app &>>$Logfile
+  validate $? "Extracting backend code"
+else
+  validate 1 "Downloading backend code"
+  echo -e "$R Skipping cleanup and unzip because download failed $N"
+  exit 1
+fi
+
+# Step 5: Install nodejs dependencies
 cd /app
-unzip /tmp/backend.zip &>>$Logfile
-validate $? "Extracted backend code"
-
 npm install &>>$Logfile
-validate $? "Installing nodejs dependencies"
+validate $? "Installing Node.js dependencies"
 
-mysql_root_password=ExpenseApp@1 
+# Step 6: Setup systemd service
+mysql_root_password=ExpenseApp@1
 
-cp /home/ec2-user/expense-shell/backend /etc/systemd/system/backend.service &>>$Logfile
-validate $? "Copied backend"
-
-cat <<EOF > /etc/systemd/system/backend.service
-[Unit]
-Description=Backend Service
-After=network.target
-
-[Service]
-User=expense
-WorkingDirectory=/app
-ExecStart=/bin/node /app/index.js
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-validate $? "Creating backend.service file"
+cp /home/ec2-user/expense-shell/backend /etc/systemd/system/backend &>>$Logfile
+validate $? "Copied backend service file"
 
 systemctl daemon-reload &>>$Logfile
-validate $? "System reload"
+validate $? "Systemd daemon reload"
 
 systemctl start backend &>>$Logfile
-validate $? "Start backend"
+validate $? "Starting backend service"
 
 systemctl enable backend &>>$Logfile
-validate $? "Enabling backend"
+validate $? "Enabling backend service"
 
+# Step 7: Install MySQL client
 dnf install mysql -y &>>$Logfile
-validate $? "Mysql client installation"
+validate $? "Installing MySQL client"
 
-mysql -h 172.31.92.210 -uroot -p${mysql_root_password} < /app/schema/backend.sql &>>$Logfile
-validate $? "schema loading"
+# Step 8: Load DB schema
+mysql -h 172.31.91.208 -uroot -p${mysql_root_password} < /app/schema/backend.sql &>>$Logfile
+validate $? "Loading schema"
 
+# Step 9: Restart backend
 systemctl restart backend &>>$Logfile
-validate $? "Restart backend"
+validate $? "Restarting backend service"
