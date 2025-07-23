@@ -2,26 +2,30 @@
 
 userid=$(id -u)
 Timestamp=$(date +%F-%H-%M-%S)
-Script_Name=$(echo $0 | cut -d "." -f1)
+Script_Name=$(basename $0 .sh)
 Logfile=/tmp/$Script_Name-$Timestamp.log
 R="\e[31m"
 G="\e[32m"
 Y="\e[33m"
 N="\e[0m"
 
+read -sp "Enter MySQL Root Password: " mysql_root_password
+echo
+
 validate() {
     if [ $1 -ne 0 ]; then 
         echo -e "$2...$R Failure $N"
+        exit 1
     else
         echo -e "$2...$G Success $N"
     fi 
 }
 
 if [ $userid -ne 0 ]; then
-    echo "Please run the script with root access"
+    echo -e "$R Please run the script with root access $N"
     exit 1
 else 
-    echo "You are super user"
+    echo -e "$G You are super user $N"
 fi
 
 # Step 1: Install Node.js 20
@@ -45,34 +49,40 @@ fi
 
 # Step 3: Create /app directory
 mkdir -p /app &>>$Logfile
-validate $? "Creating app directory"
+validate $? "Creating /app directory"
 
 # Step 4: Download and extract backend code
 curl -o /tmp/backend.zip https://expense-builds.s3.us-east-1.amazonaws.com/expense-backend-v2.zip &>>$Logfile
 if [ $? -eq 0 ]; then
-  validate 0 "Downloading backend code"
+    validate 0 "Downloading backend code"
 
-  rm -rf /app/* &>>$Logfile
-  validate $? "Cleaning old app contents"
+    rm -rf /app/* &>>$Logfile
+    validate $? "Cleaning old app contents"
 
-  unzip /tmp/backend.zip -d /app &>>$Logfile
-  validate $? "Extracting backend code"
+    unzip /tmp/backend.zip -d /app &>>$Logfile
+    validate $? "Extracting backend code"
 else
-  validate 1 "Downloading backend code"
-  echo -e "$R Skipping cleanup and unzip because download failed $N"
-  exit 1
+    validate 1 "Downloading backend code"
+    echo -e "$R Skipping further steps due to download failure $N"
+    exit 1
 fi
 
 # Step 5: Install nodejs dependencies
-cd /app
+cd /app || exit 1
 npm install &>>$Logfile
 validate $? "Installing Node.js dependencies"
 
 # Step 6: Setup systemd service
-mysql_root_password=ExpenseApp@1
+SERVICE_FILE_SRC="/home/ec2-user/expense-shell/backend"
+SERVICE_FILE_DST="/etc/systemd/system/backend"
 
-cp /home/ec2-user/expense-shell/backend /etc/systemd/system/backend &>>$Logfile
-validate $? "Copied backend service file"
+if [ -f "$SERVICE_FILE_SRC" ]; then
+    cp $SERVICE_FILE_SRC $SERVICE_FILE_DST &>>$Logfile
+    validate $? "Copied backend service file"
+else
+    echo -e "$R Backend service file not found at $SERVICE_FILE_SRC $N"
+    exit 1
+fi
 
 systemctl daemon-reload &>>$Logfile
 validate $? "Systemd daemon reload"
@@ -88,8 +98,8 @@ dnf install mysql -y &>>$Logfile
 validate $? "Installing MySQL client"
 
 # Step 8: Load DB schema
-mysql -h 172.31.91.208 -uroot -p${mysql_root_password} < /app/schema/backend.sql &>>$Logfile
-validate $? "Loading schema"
+mysql -h 172.31.91.208 -uroot -p"${mysql_root_password}" < /app/schema/backend.sql &>>$Logfile
+validate $? "Loading DB schema"
 
 # Step 9: Restart backend
 systemctl restart backend &>>$Logfile
