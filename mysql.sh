@@ -8,6 +8,8 @@ R="\e[31m"
 G="\e[32m"
 Y="\e[33m"
 N="\e[0m"
+echo "please Enter DB Password:"
+read -s mysql_root_passeord
 
 validate() {
     if [ $1 -ne 0 ]; then 
