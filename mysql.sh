@@ -9,31 +9,29 @@ G="\e[32m"
 Y="\e[33m"
 N="\e[0m"
 
-validtae(){
-    if [ $1 -ne 0 ]
-    then 
-    echo -e "$2...$R Failure $N"
+validate() {
+    if [ $1 -ne 0 ]; then 
+        echo -e "$2...$R Failure $N"
     else
-    echo -e "$2...$G Success $N"
+        echo -e "$2...$G Success $N"
     fi 
 }
 
-if [ $userid -ne 0 ]
-then
-echo "Please run the script with root access"
+if [ $userid -ne 0 ]; then
+    echo "Please run the script with root access"
+    exit 1
 else 
-echo "You are super user"
-
+    echo "You are super user"
 fi
 
 dnf install mysql -y &>>$Logfile
 validate $? "Installing Mysql Server"
 
-systemctl enable mysqld &>>Logfile
+systemctl enable mysqld &>>$Logfile
 validate $? "mysql server enable"
 
-systemctl start mysqld &>>Logfile
+systemctl start mysqld &>>$Logfile
 validate $? "Mysql server started"
 
-mysql_secure_installation --set-root-pass ExpenseApp@1 &>>Logfile
+mysql_secure_installation --set-root-pass ExpenseApp@1 &>>$Logfile
 validate $? "Mysql server set the password"
