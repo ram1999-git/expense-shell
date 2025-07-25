@@ -7,4 +7,4 @@ echo "Process Instance ID of the script is:$$"
 
 ./Other-script.sh
 
-echo "After calling script,course:$course
+echo "After calling script,course:$course"
